@@ -48,9 +48,20 @@ export async function POST(request: NextRequest) {
 
     try {
       if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        // Use pdfjs-dist operator list — tracks fill color + render mode per glyph,
-        // so white text / invisible mode 3 / micro-font are never included.
-        resumeText = await extractPdfTextSanitized(buffer);
+        // Primary: pdfjs-dist operator list — tracks fill color + render mode
+        // per glyph so white/invisible text is never included.
+        // Fallback: pdf-parse v2 — extracts all text (no color filtering) if
+        // pdfjs-dist fails to initialise its worker (e.g. cold-start on Vercel).
+        try {
+          resumeText = await extractPdfTextSanitized(buffer);
+        } catch (pdfjsErr) {
+          console.warn("pdfjs-dist failed, falling back to pdf-parse:", (pdfjsErr as Error).message);
+          const { PDFParse } = await import("pdf-parse");
+          const parser = new PDFParse({ data: buffer });
+          const result = await parser.getText();
+          await parser.destroy();
+          resumeText = result.text;
+        }
 
       } else if (
         file.type ===

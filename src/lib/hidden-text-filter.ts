@@ -21,7 +21,6 @@
  *  ─────────── Keyword-stuffed lines (dense, comma-heavy, no sentence structure)
  */
 
-import { resolve } from "path";
 import { pathToFileURL } from "url";
 
 // ─── PDF: pdfjs-dist operator-list approach ──────────────────────────────────
@@ -45,10 +44,11 @@ export async function extractPdfTextSanitized(buffer: Buffer): Promise<string> {
     OPS: Record<string, number>;
   };
 
-  // Point to the worker file so pdfjs can spawn it (required in v5)
-  const workerPath = resolve(
-    process.cwd(),
-    "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
+  // Resolve the worker file path — require.resolve works across local and
+  // deployed (Vercel) environments without relying on process.cwd().
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const workerPath: string = require.resolve(
+    "pdfjs-dist/legacy/build/pdf.worker.mjs"
   );
   GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href;
 
