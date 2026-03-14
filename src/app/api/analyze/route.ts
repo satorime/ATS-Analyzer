@@ -3,6 +3,7 @@ import { analyzeResume } from "@/lib/ats-analyzer";
 import { prisma } from "@/lib/prisma";
 import {
   extractPdfTextSanitized,
+  extractPdfTextFallback,
   extractDocxTextSanitized,
   removeKeywordStuffing,
 } from "@/lib/hidden-text-filter";
@@ -55,12 +56,10 @@ export async function POST(request: NextRequest) {
         try {
           resumeText = await extractPdfTextSanitized(buffer);
         } catch (pdfjsErr) {
-          console.warn("pdfjs-dist failed, falling back to pdf-parse:", (pdfjsErr as Error).message);
-          const { PDFParse } = await import("pdf-parse");
-          const parser = new PDFParse({ data: buffer });
-          const result = await parser.getText();
-          await parser.destroy();
-          resumeText = result.text;
+          // pdfjs-dist worker unavailable (e.g. Vercel cold-start).
+          // Fall back to pure Node.js / zlib extractor — no worker needed.
+          console.warn("pdfjs-dist unavailable, using fallback:", (pdfjsErr as Error).message);
+          resumeText = extractPdfTextFallback(buffer);
         }
 
       } else if (
