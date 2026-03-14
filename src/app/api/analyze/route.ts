@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeResume } from "@/lib/ats-analyzer";
 import { prisma } from "@/lib/prisma";
+import {
+  buildPdfHiddenTextSet,
+  removePdfHiddenText,
+  extractDocxTextSanitized,
+  removeKeywordStuffing,
+} from "@/lib/hidden-text-filter";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,18 +49,26 @@ export async function POST(request: NextRequest) {
 
     try {
       if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
-        const parsed = await pdfParse(buffer);
-        resumeText = parsed.text;
+        // 1. Scan the raw PDF streams for white/invisible text operators
+        const hiddenSet = buildPdfHiddenTextSet(buffer);
+
+        // 2. Extract all text with pdf-parse v2
+        const { PDFParse } = await import("pdf-parse");
+        const parser = new PDFParse({ data: buffer });
+        const result = await parser.getText();
+        await parser.destroy();
+
+        // 3. Strip out the hidden text chunks
+        resumeText = removePdfHiddenText(result.text, hiddenSet);
+
       } else if (
         file.type ===
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
         file.name.toLowerCase().endsWith(".docx")
       ) {
-        const mammoth = await import("mammoth");
-        const result = await mammoth.extractRawText({ buffer });
-        resumeText = result.value;
+        // Directly parse the DOCX XML — strips white font, vanish flag, tiny font sizes
+        resumeText = await extractDocxTextSanitized(buffer);
+
       } else {
         resumeText = buffer.toString("utf-8");
       }
@@ -66,6 +80,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Final pass: drop suspicious keyword-dump lines (all formats)
+    resumeText = removeKeywordStuffing(resumeText);
+
     if (resumeText.trim().length < 100) {
       return NextResponse.json(
         { error: "The resume appears to be empty or too short to analyze." },
@@ -75,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     const analysis = analyzeResume(resumeText, jobDescription);
 
-    // Persist to DB (non-critical — continue even if DB is unavailable)
+    // Persist to DB (non-critical — continues even if DB is unavailable)
     let savedId: string | null = null;
     try {
       const saved = await prisma.analysis.create({
@@ -91,7 +108,7 @@ export async function POST(request: NextRequest) {
       });
       savedId = saved.id;
     } catch (dbErr) {
-      console.warn("DB save skipped (no database configured):", (dbErr as Error).message);
+      console.warn("DB save skipped:", (dbErr as Error).message);
     }
 
     return NextResponse.json({
