@@ -1,8 +1,10 @@
-import { PrismaClient } from "../generated/prisma";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PrismaClient } = require("../generated/prisma") as typeof import("../generated/prisma");
 import { PrismaPg } from "@prisma/adapter-pg";
 
-function createPrismaClient(): PrismaClient {
-  // Use DATABASE_URL, fallback to placeholder (queries will fail gracefully if no DB)
+type PrismaClientType = InstanceType<typeof PrismaClient>;
+
+function createPrismaClient(): PrismaClientType {
   const connectionString =
     process.env.DATABASE_URL ??
     "postgresql://placeholder:placeholder@localhost:5432/placeholder";
@@ -12,10 +14,10 @@ function createPrismaClient(): PrismaClient {
 }
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: PrismaClientType | undefined;
 };
 
-export const prisma: PrismaClient =
+export const prisma: PrismaClientType =
   globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

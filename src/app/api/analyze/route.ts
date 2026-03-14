@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeResume } from "@/lib/ats-analyzer";
 import { prisma } from "@/lib/prisma";
 import {
-  buildPdfHiddenTextSet,
-  removePdfHiddenText,
+  extractPdfTextSanitized,
   extractDocxTextSanitized,
   removeKeywordStuffing,
 } from "@/lib/hidden-text-filter";
@@ -49,17 +48,9 @@ export async function POST(request: NextRequest) {
 
     try {
       if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        // 1. Scan the raw PDF streams for white/invisible text operators
-        const hiddenSet = buildPdfHiddenTextSet(buffer);
-
-        // 2. Extract all text with pdf-parse v2
-        const { PDFParse } = await import("pdf-parse");
-        const parser = new PDFParse({ data: buffer });
-        const result = await parser.getText();
-        await parser.destroy();
-
-        // 3. Strip out the hidden text chunks
-        resumeText = removePdfHiddenText(result.text, hiddenSet);
+        // Use pdfjs-dist operator list — tracks fill color + render mode per glyph,
+        // so white text / invisible mode 3 / micro-font are never included.
+        resumeText = await extractPdfTextSanitized(buffer);
 
       } else if (
         file.type ===
