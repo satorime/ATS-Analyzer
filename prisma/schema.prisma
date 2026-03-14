@@ -1,0 +1,22 @@
+// Prisma 7 schema — connection URL lives in prisma.config.ts
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Analysis {
+  id              String   @id @default(cuid())
+  resumeName      String
+  resumeText      String   @db.Text
+  jobDescription  String   @db.Text
+  score           Float
+  matchedKeywords String[]
+  missingKeywords String[]
+  suggestions     String[]
+  createdAt       DateTime @default(now())
+}
