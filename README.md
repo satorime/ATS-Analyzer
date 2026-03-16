@@ -12,7 +12,6 @@ A production-ready **Resume ATS Analyzer** that scores your resume against any j
 | [Next.js 16](https://nextjs.org) (App Router) | Full-stack React framework |
 | [TypeScript](https://www.typescriptlang.org) | Type-safe JavaScript |
 | [Tailwind CSS v4](https://tailwindcss.com) | Utility-first styling |
-| Material You (MD3) | Design system — tonal surfaces, pill buttons, organic radii |
 | [Lucide React](https://lucide.dev) | Icon library |
 
 ### Backend
