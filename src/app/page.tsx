@@ -268,10 +268,10 @@ export default function Home() {
       <footer className="fixed bottom-0 left-0 right-0 bg-[#FFFBFE]/80 backdrop-blur-md border-t border-[#CAC4D0]/40 py-3 z-40">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-[#79747E]">
-            ATS Resume Analyzer · Next.js · TypeScript · Prisma · PostgreSQL
+            © 2026 Brix Bitayo • All rights reserved
           </p>
           <p className="text-xs text-[#79747E]">
-            Files are processed server-side and not stored permanently
+            Next.js · TypeScript · Prisma · PostgreSQL
           </p>
         </div>
       </footer>
